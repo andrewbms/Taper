@@ -127,6 +127,17 @@ a{color:var(--accent)}
     <div class="legend"><span><i style="background:var(--accent)"></i>At or under limit</span><span><i style="background:var(--over)"></i>Over</span><span><i style="background:var(--muted);height:2px;vertical-align:3px"></i>Limit</span></div>
   </div>
   <div class="card">
+    <h2>Fix a past day</h2>
+    <p class="hint" style="margin:0 0 4px">Forgot to log one, or tapped too many? Pick the day and adjust.</p>
+    <label>Day</label>
+    <input id="fixDate" type="date">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px">
+      <button class="ghost" id="fixMinus" style="flex:0 0 64px;font-size:26px;padding:8px">−</button>
+      <div style="text-align:center"><div id="fixCount" style="font-size:40px;font-weight:700;line-height:1">0</div><div class="hint" id="fixLimit" style="margin:4px 0 0"></div></div>
+      <button class="ghost" id="fixPlus" style="flex:0 0 64px;font-size:26px;padding:8px">+</button>
+    </div>
+  </div>
+  <div class="card">
     <h2>The plan</h2>
     <p class="hint" id="planSummary" style="margin:0 0 8px"></p>
     <div id="planList"></div>
@@ -393,7 +404,21 @@ function go(v){
 }
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>go(b.dataset.v));
 
-function renderAll(){renderToday();renderProgress();fillSettings();showTip()}
+
+function renderFix(){
+  const v=$('fixDate').value;if(!v)return;
+  const d=parseKey(v);$('fixCount').textContent=countOn(v);
+  $('fixLimit').textContent='limit that day: '+limitFor(d);
+  $('fixMinus').disabled=countOn(v)===0;
+}
+(function(){const t=new Date();const y=new Date(t);y.setDate(t.getDate()-1);$('fixDate').value=dkey(y);$('fixDate').max=dkey(t)})();
+$('fixDate').onchange=renderFix;
+$('fixPlus').onclick=()=>{const v=$('fixDate').value;if(!v)return;const d=parseKey(v);
+  if(v===dkey(new Date())){state.logs.push(Date.now())}else{const n=countOn(v);d.setHours(12,0,0,0);state.logs.push(d.getTime()+n*60000)}
+  persist();renderFix();renderToday();renderProgress()};
+$('fixMinus').onclick=()=>{const v=$('fixDate').value;const ts=state.logs.filter(t=>dkey(t)===v);if(!ts.length)return;
+  const last=Math.max(...ts);state.logs.splice(state.logs.indexOf(last),1);persist();renderFix();renderToday();renderProgress()};
+function renderAll(){renderToday();renderProgress();fillSettings();showTip();renderFix()}
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
 renderAll();
 if(!S().setup){go('settings');setTimeout(()=>toast('Set up the plan to get started'),400)}
